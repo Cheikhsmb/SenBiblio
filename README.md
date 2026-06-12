@@ -17,7 +17,7 @@
 
 ## 🛠️ Stack Technique
 
-* **Serveur / Logique :** PHP 7.4+ (requiert les extensions `pdo` et `pdo_mysql`)
+* **Serveur / Logique :** PHP 8.5.7 (requiert les extensions `pdo` et `pdo_mysql`)
 * **Base de données :** MySQL / MariaDB
 * **Design & Animations :** Vanilla CSS, Bootstrap 5.3, Font Awesome 6, p5.js
 * **Sécurité :** Authentification par session PHP, hachage de mot de passe (`password_hash`), jetons CSRF uniques par formulaire.
