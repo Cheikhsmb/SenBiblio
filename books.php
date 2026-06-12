@@ -11,6 +11,30 @@ $categories = $pdo->query('SELECT id, name FROM categories ORDER BY name')->fetc
 $book = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!verifyCsrf($csrfToken)) {
+        setFlash('Jeton de sécurité invalide. Veuillez réessayer.', 'danger');
+        header('Location: books.php');
+        exit;
+    }
+
+    $postAction = $_POST['action'] ?? '';
+
+    if ($postAction === 'delete') {
+        $deleteId = isset($_POST['book_id']) ? (int)$_POST['book_id'] : null;
+        if ($deleteId) {
+            try {
+                $stmt = $pdo->prepare('DELETE FROM books WHERE id = ?');
+                $stmt->execute([$deleteId]);
+                setFlash('Livre supprimé avec succès.', 'success');
+            } catch (PDOException $e) {
+                setFlash('Impossible de supprimer le livre. Vérifiez s’il est utilisé par un emprunt.', 'danger');
+            }
+        }
+        header('Location: books.php');
+        exit;
+    }
+
     $isbn = trim($_POST['isbn'] ?? '');
     $title = trim($_POST['title'] ?? '');
     $author = trim($_POST['author'] ?? '');
@@ -51,18 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setFlash('Livre ajouté à la collection.', 'success');
     }
 
-    header('Location: books.php');
-    exit;
-}
-
-if ($action === 'delete' && $bookId) {
-    try {
-        $stmt = $pdo->prepare('DELETE FROM books WHERE id = ?');
-        $stmt->execute([$bookId]);
-        setFlash('Livre supprimé avec succès.', 'success');
-    } catch (PDOException $e) {
-        setFlash('Impossible de supprimer le livre. Vérifiez s’il est utilisé par un emprunt.', 'danger');
-    }
     header('Location: books.php');
     exit;
 }
@@ -144,7 +156,12 @@ $books = $books->fetchAll();
                                             <td class="text-center text-warning fw-semibold"><?= htmlspecialchars($row['copies_available']) ?>/<?= htmlspecialchars($row['copies_total']) ?></td>
                                             <td class="text-end">
                                                 <a href="books.php?action=edit&id=<?= $row['id'] ?>" class="btn btn-sm btn-outline-light me-2">Modifier</a>
-                                                <a href="books.php?action=delete&id=<?= $row['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Supprimer ce livre ?');">Supprimer</a>
+                                                <form method="POST" action="books.php" style="display: inline;" onsubmit="return confirm('Supprimer ce livre ?');">
+                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="book_id" value="<?= $row['id'] ?>">
+                                                    <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                                                </form>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -159,6 +176,7 @@ $books = $books->fetchAll();
                 <div class="dashboard-card p-4 rounded-4">
                     <h3 class="h5 text-white mb-3"><?= $book ? 'Modifier le livre' : 'Ajouter un nouveau livre' ?></h3>
                     <form method="POST" class="needs-validation" novalidate>
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
                         <input type="hidden" name="book_id" value="<?= $book ? $book['id'] : '' ?>">
                         <div class="mb-3">
                             <label class="form-label text-white">ISBN</label>

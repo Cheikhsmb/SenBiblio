@@ -8,6 +8,36 @@ $action = $_GET['action'] ?? '';
 $borrowingId = isset($_GET['id']) ? (int)$_GET['id'] : null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!verifyCsrf($csrfToken)) {
+        setFlash('Jeton de sécurité invalide. Veuillez réessayer.', 'danger');
+        header('Location: borrowings.php');
+        exit;
+    }
+
+    $postAction = $_POST['action'] ?? '';
+
+    if ($postAction === 'return') {
+        $returnId = isset($_POST['borrowing_id']) ? (int)$_POST['borrowing_id'] : null;
+        if ($returnId) {
+            $stmt = $pdo->prepare('SELECT book_id, returned FROM borrowings WHERE id = ?');
+            $stmt->execute([$returnId]);
+            $borrowing = $stmt->fetch();
+
+            if (!$borrowing) {
+                setFlash('Emprunt introuvable.', 'danger');
+            } elseif ($borrowing['returned']) {
+                setFlash('Ce livre a déjà été retourné.', 'warning');
+            } else {
+                $pdo->prepare('UPDATE borrowings SET returned = 1, returned_date = CURDATE() WHERE id = ?')->execute([$returnId]);
+                $pdo->prepare('UPDATE books SET copies_available = copies_available + 1 WHERE id = ?')->execute([$borrowing['book_id']]);
+                setFlash('Retour enregistré. Merci.', 'success');
+            }
+        }
+        header('Location: borrowings.php');
+        exit;
+    }
+
     $studentId = (int)($_POST['student_id'] ?? 0);
     $bookId = (int)($_POST['book_id'] ?? 0);
     $borrowDate = $_POST['borrow_date'] ?? '';
@@ -33,24 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([$studentId, $bookId, $borrowDate, $dueDate]);
     $pdo->prepare('UPDATE books SET copies_available = copies_available - 1 WHERE id = ?')->execute([$bookId]);
     setFlash('Emprunt enregistré avec succès.', 'success');
-    header('Location: borrowings.php');
-    exit;
-}
-
-if ($action === 'return' && $borrowingId) {
-    $stmt = $pdo->prepare('SELECT book_id, returned FROM borrowings WHERE id = ?');
-    $stmt->execute([$borrowingId]);
-    $borrowing = $stmt->fetch();
-
-    if (!$borrowing) {
-        setFlash('Emprunt introuvable.', 'danger');
-    } elseif ($borrowing['returned']) {
-        setFlash('Ce livre a déjà été retourné.', 'warning');
-    } else {
-        $pdo->prepare('UPDATE borrowings SET returned = 1, returned_date = CURDATE() WHERE id = ?')->execute([$borrowingId]);
-        $pdo->prepare('UPDATE books SET copies_available = copies_available + 1 WHERE id = ?')->execute([$borrowing['book_id']]);
-        setFlash('Retour enregistré. Merci.', 'success');
-    }
     header('Location: borrowings.php');
     exit;
 }
@@ -146,7 +158,12 @@ $books = $pdo->query('SELECT id, title, copies_available FROM books ORDER BY tit
                                             </td>
                                             <td class="text-end">
                                                 <?php if (!$row['returned']): ?>
-                                                    <a href="borrowings.php?action=return&id=<?= $row['id'] ?>" class="btn btn-sm btn-success" onclick="return confirm('Marquer comme retourné ?');">Retour</a>
+                                                    <form method="POST" action="borrowings.php" style="display: inline;" onsubmit="return confirm('Marquer comme retourné ?');">
+                                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
+                                                        <input type="hidden" name="action" value="return">
+                                                        <input type="hidden" name="borrowing_id" value="<?= $row['id'] ?>">
+                                                        <button type="submit" class="btn btn-sm btn-success">Retour</button>
+                                                    </form>
                                                 <?php else: ?>
                                                     <span class="text-white-50 small">-</span>
                                                 <?php endif; ?>
@@ -164,6 +181,7 @@ $books = $pdo->query('SELECT id, title, copies_available FROM books ORDER BY tit
                 <div class="dashboard-card p-4 rounded-4">
                     <h3 class="h5 text-white mb-3">Nouvel emprunt</h3>
                     <form method="POST" class="needs-validation" novalidate>
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
                         <div class="mb-3">
                             <label class="form-label text-white">Étudiant</label>
                             <select name="student_id" class="form-select form-select-lg" required>

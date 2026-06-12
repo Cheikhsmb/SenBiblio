@@ -9,6 +9,30 @@ $action = $_GET['action'] ?? '';
 $student = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!verifyCsrf($csrfToken)) {
+        setFlash('Jeton de sécurité invalide. Veuillez réessayer.', 'danger');
+        header('Location: students.php');
+        exit;
+    }
+
+    $postAction = $_POST['action'] ?? '';
+
+    if ($postAction === 'delete') {
+        $deleteId = isset($_POST['student_id']) ? (int)$_POST['student_id'] : null;
+        if ($deleteId) {
+            try {
+                $stmt = $pdo->prepare('DELETE FROM students WHERE id = ?');
+                $stmt->execute([$deleteId]);
+                setFlash('Étudiant supprimé.', 'success');
+            } catch (PDOException $e) {
+                setFlash('Impossible de supprimer cet étudiant. Vérifiez les emprunts associés.', 'danger');
+            }
+        }
+        header('Location: students.php');
+        exit;
+    }
+
     $name = trim($_POST['name'] ?? '');
     $studentNumber = trim($_POST['student_number'] ?? '');
     $email = trim($_POST['email'] ?? '');
@@ -38,18 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare('INSERT INTO students (name, student_number, email, program, academic_year) VALUES (?, ?, ?, ?, ?)');
         $stmt->execute([$name, $studentNumber, $email, $program, $academicYear]);
         setFlash('Étudiant ajouté à la base.', 'success');
-    }
-    header('Location: students.php');
-    exit;
-}
-
-if ($action === 'delete' && $studentId) {
-    try {
-        $stmt = $pdo->prepare('DELETE FROM students WHERE id = ?');
-        $stmt->execute([$studentId]);
-        setFlash('Étudiant supprimé.', 'success');
-    } catch (PDOException $e) {
-        setFlash('Impossible de supprimer cet étudiant. Vérifiez les emprunts associés.', 'danger');
     }
     header('Location: students.php');
     exit;
@@ -132,7 +144,12 @@ $students = $stmt->fetchAll();
                                             <td><?= htmlspecialchars($row['email']) ?></td>
                                             <td class="text-end">
                                                 <a href="students.php?action=edit&id=<?= $row['id'] ?>" class="btn btn-sm btn-outline-light me-2">Modifier</a>
-                                                <a href="students.php?action=delete&id=<?= $row['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Supprimer cet étudiant ?');">Supprimer</a>
+                                                <form method="POST" action="students.php" style="display: inline;" onsubmit="return confirm('Supprimer cet étudiant ?');">
+                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="student_id" value="<?= $row['id'] ?>">
+                                                    <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                                                </form>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -147,6 +164,7 @@ $students = $stmt->fetchAll();
                 <div class="dashboard-card p-4 rounded-4">
                     <h3 class="h5 text-white mb-3"><?= $student ? 'Modifier l’étudiant' : 'Ajouter un étudiant' ?></h3>
                     <form method="POST" class="needs-validation" novalidate>
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
                         <input type="hidden" name="student_id" value="<?= $student ? $student['id'] : '' ?>">
                         <div class="mb-3">
                             <label class="form-label text-white">Nom complet</label>
