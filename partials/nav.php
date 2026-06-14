@@ -10,8 +10,8 @@
             <a class="navbar-brand d-flex align-items-center text-white gap-2" href="dashboard.php">
                 <span class="brand-icon"><i class="fa-solid fa-book-open-reader text-warning"></i></span>
                 <div>
-                    <h5 class="mb-0 fw-bold font-heading text-white" style="font-size: 1.1rem; letter-spacing: 0.5px;">Sénégal Digital Library</h5>
-                    <p class="mb-0 text-white-50 small" style="font-size: 0.72rem;">Gestion universitaire moderne</p>
+                    <h5 class="mb-0 fw-bold font-heading text-white" style="font-size: 1.1rem; letter-spacing: 0.5px;"><?= APP_NAME ?></h5>
+                    <p class="mb-0 text-white-50 small" style="font-size: 0.72rem;">Gestion de bibliothèque</p>
                 </div>
             </a>
             
@@ -33,7 +33,7 @@
                     </li>
                     <li class="nav-item">
                         <a href="students.php" class="nav-link custom-nav-link <?= ($active === 'students') ? 'active-link' : '' ?>">
-                            <i class="fa-solid fa-graduation-cap me-2"></i>Étudiants
+                            <i class="fa-solid fa-user-group me-2"></i>Membres
                         </a>
                     </li>
                     <li class="nav-item">

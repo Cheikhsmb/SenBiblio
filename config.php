@@ -9,7 +9,7 @@ define('DB_NAME', 'library_senegal');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 
-define('APP_NAME', 'Senegal Digital Library');
+define('APP_NAME', 'Library Management System');
 
 define('COLOR_PRIMARY', '#1f3a5f');
 define('COLOR_ACCENT', '#f0a500');

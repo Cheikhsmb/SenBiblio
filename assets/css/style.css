@@ -246,3 +246,59 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 .navbar-toggler:focus {
   box-shadow: none;
 }
+
+/* Availability badges */
+.badge.bg-success {
+  background-color: #198754 !important;
+}
+.badge.bg-warning.text-dark {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+.badge.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+/* Table enhancements for dark theme */
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+.table-hover > tbody > tr:hover {
+  background-color: rgba(240, 165, 0, 0.08) !important;
+}
+
+/* Toast container */
+.toast-container {
+  z-index: 9999 !important;
+}
+.toast {
+  background: rgba(8, 18, 41, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Overdue row highlight for dark theme */
+.table > tbody > tr.bg-danger-subtle {
+  background-color: rgba(220, 53, 69, 0.15) !important;
+}
+.table > tbody > tr.bg-danger-subtle:hover {
+  background-color: rgba(220, 53, 69, 0.25) !important;
+}
+
+/* Badge for member category */
+.badge.bg-secondary {
+  background-color: #6c757d !important;
+  font-weight: 500;
+}
+
+/* Empty state styling */
+.text-white-50 small {
+  opacity: 0.8;
+}
+
+/* Form optional field label */
+.form-label .text-white-50.small {
+  font-weight: 400;
+  font-size: 0.75rem;
+}

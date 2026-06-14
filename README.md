@@ -1,109 +1,133 @@
-# 🇸🇳 Bibliothèque Numérique du Sénégal — Panneau d'Administration
+# Library Management System
 
-> Un système de gestion moderne, fluide et sécurisé pour administrer les livres, les étudiants et les prêts d'une bibliothèque universitaire sénégalaise.
-
----
-
-## 🌟 Fonctionnalités Clés
-
-* **📊 Tableau de Bord Dynamique :** Visualisez instantanément les statistiques importantes (nombre total de livres, étudiants enregistrés, prêts actifs et retards).
-* **📚 Gestion du Catalogue (Livres) :** CRUD complet permettant d'ajouter, modifier, rechercher et supprimer des titres (avec gestion automatique des stocks de copies disponibles).
-* **🎓 Suivi des Étudiants :** Gestion simple des profils étudiants avec recherche et association automatique aux emprunts.
-* **📖 Gestion des Prêts & Retours :** Enregistrement des transactions de prêts avec détection automatique des retours en retard.
-* **🛡️ Sécurité Renforcée :** Protection globale contre les failles CSRF sur toutes les soumissions de formulaires et sécurisation des actions destructives par requête POST.
-* **🎨 Interface Élégante :** Thème sombre moderne inspiré du Sénégal avec des arrière-plans animés par p5.js (particules en mouvement et livres flottants).
+> A modern, secure, and elegant library management system for administering books, members, and loans.
 
 ---
 
-## 🛠️ Stack Technique
+## ✨ Key Features
 
-* **Serveur / Logique :** PHP 7.4+ (requiert les extensions `pdo` et `pdo_mysql`)
-* **Base de données :** MySQL / MariaDB
-* **Design & Animations :** Vanilla CSS, Bootstrap 5.3, Font Awesome 6, p5.js
-* **Sécurité :** Authentification par session PHP, hachage de mot de passe (`password_hash`), jetons CSRF uniques par formulaire.
+* **📊 Dynamic Dashboard:** Instantly view key statistics (total books, registered members, active loans, overdue items).
+* **📚 Catalog Management (Books):** Full CRUD to add, edit, search, and delete titles (with automatic copy stock management).
+* **👥 Member Management:** Simple member profiles with search, categories (Member, Student, Senior, Child, Other), phone, address, and automatic loan association.
+* **📖 Loan & Return Management:** Record loan transactions with automatic overdue detection and visual highlighting.
+* **🛡️ Enhanced Security:** Global CSRF protection on all form submissions and POST-only destructive actions.
+* **🎨 Elegant Interface:** Modern dark glassmorphism theme with animated p5.js backgrounds (floating particles and books).
+* **🔔 Toast Notifications:** Non-intrusive Bootstrap toast notifications for success/warning/error messages.
+* **📱 Responsive Design:** Works seamlessly on desktop and mobile.
 
 ---
 
-## 🚀 Guide de Démarrage Rapide
+## 🛠️ Tech Stack
 
-### 📋 Prérequis
-* PHP installé sur votre machine (ex. via Laragon, XAMPP, ou en ligne de commande).
-* Serveur de base de données MySQL actif.
+* **Server / Logic:** PHP 7.4+ (requires `pdo` and `pdo_mysql` extensions)
+* **Database:** MySQL / MariaDB
+* **Design & Animations:** Vanilla CSS, Bootstrap 5.3, Font Awesome 6, p5.js
+* **Security:** PHP session authentication, password hashing (`password_hash`), unique CSRF tokens per form.
 
-### 📥 1. Importer la Base de Données
-Créez la base de données et importez les données de test à l'aide du fichier de dump fourni :
+---
+
+## 🚀 Quick Start Guide
+
+### 📋 Prerequisites
+* PHP installed (e.g., via Laragon, XAMPP, or CLI).
+* Active MySQL database server.
+
+### 📥 1. Import Database
+Create the database and import sample data using the provided dump:
 ```bash
 mysql -u root -p < db.sql
 ```
-*(Le script va créer automatiquement la base `library_senegal` et insérer les tables nécessaires ainsi que 94 livres et utilisateurs fictifs).*
+*(The script automatically creates the `library_senegal` database and inserts tables plus 94 books and sample users).*
 
-### 🔑 2. Configuration
-Ouvrez le fichier `config.php` et ajustez les informations de connexion à votre base de données MySQL si nécessaire :
+### 🔄 2. Run Migration (Optional - for new phone/address fields)
+To add phone and address columns to the members table:
+```bash
+mysql -u root -p < migrate.sql
+```
+
+### 🔑 3. Configuration
+Open `config.php` and adjust your MySQL connection if needed:
 ```php
 define('DB_HOST', '127.0.0.1');
 define('DB_NAME', 'library_senegal');
-define('DB_USER', 'root'); // Votre utilisateur
-define('DB_PASS', '');     // Votre mot de passe
+define('DB_USER', 'root'); // Your username
+define('DB_PASS', '');     // Your password
 ```
 
-### 💻 3. Lancer le Serveur Local
-Démarrez le serveur interne de PHP depuis la racine du projet :
+### 💻 4. Start Local Server
+Start PHP's built-in server from the project root:
 ```bash
 php -S localhost:8000
 ```
 
-### 🌐 4. Accéder à l'Application
-Rendez-vous sur votre navigateur préféré à l'adresse suivante :
+### 🌐 5. Access Application
+Open your browser to:
 👉 **[http://localhost:8000](http://localhost:8000)**
 
 ---
 
-## 🔐 Identifiants de Test (Se connecter)
+## 🔐 Test Credentials
 
-Utilisez le compte administrateur pré-configuré dans la base de données :
+Use the pre-configured admin account:
 
-* **Adresse Email :** `admin@senlibrary.edu`
-* **Mot de passe :** `admin123`
+* **Email:** `admin@library.local`
+* **Password:** `admin123`
 
 ---
 
-## 📁 Structure Globale du Projet
+## 📁 Project Structure
 
 ```
 Projet PHP/
 ├── assets/
-│   ├── css/style.css     # Charte graphique & Glassmorphism
+│   ├── css/style.css       # Design system & Glassmorphism
 │   └── js/
-│       ├── dashboard.js  # Animation canvas du Dashboard (p5.js)
-│       └── p5-login.js   # Animation canvas de Connexion (p5.js)
+│       ├── dashboard.js    # Dashboard canvas animation (p5.js)
+│       ├── p5-login.js     # Login canvas animation (p5.js)
+│       └── toast.js        # Bootstrap toast notifications
 ├── partials/
-│   └── nav.php           # Barre de navigation partagée
-├── config.php            # Connexion PDO & Fonctions de sécurité (CSRF, Auth)
-├── index.php             # Page d'accueil & Connexion sécurisée
-├── dashboard.php         # Tableau de bord principal
-├── books.php             # Gestion des livres (CRUD)
-├── students.php          # Gestion des profils étudiants (CRUD)
-├── borrowings.php        # Gestion des prêts & retours
-├── logout.php            # Déconnexion propre
-├── db.sql                # Script d'import de la base de données
-└── README.md             # Ce fichier
+│   └── nav.php             # Shared navigation bar
+├── config.php              # PDO connection & security functions (CSRF, Auth)
+├── index.php               # Login page
+├── dashboard.php           # Main dashboard
+├── books.php               # Book management (CRUD)
+├── students.php            # Member management (CRUD)
+├── borrowings.php          # Loan & return management
+├── logout.php              # Clean logout
+├── db.sql                  # Database import script
+├── migrate.sql             # Migration for phone/address columns
+└── README.md               # This file
 ```
+
+---
+
+## 🔄 Recent Improvements
+
+* **Generalized terminology:** "Étudiants" → "Membres", "Programme" → "Catégorie", "Année d'étude" → "Type d'abonnement"
+* **New optional fields:** Phone and address for members (run `migrate.sql` to add columns)
+* **Member categories dropdown:** Adhérent, Étudiant, Senior, Enfant, Autre
+* **Availability badges:** Green (>1 copy), Yellow (1 copy), Red (0 copies)
+* **Overdue highlighting:** Red-tinted rows for overdue loans
+* **Toast notifications:** Replaced inline alerts with Bootstrap toasts (auto-dismiss 4s)
+* **Dashboard:** Added "Retards" (overdue) stat card
+* **Better empty states:** Icons and helpful messages
+* **Table enhancements:** Striped rows, hover effects
 
 ---
 
 ## 🤝 Contribution & Git
 
-Pour cloner et pousser vos modifications sur votre propre dépôt GitHub :
+To clone and push changes to your own GitHub repo:
 ```bash
-# Initialiser le dépôt
+# Initialize repo
 git init
 
-# Ajouter les fichiers
+# Add files
 git add .
-git commit -m "Initial commit: Sénégal Digital Library fonctionnel et sécurisé"
+git commit -m "Library Management System - generalized & enhanced"
 
-# Lier le dépôt distant (remplacez l'URL)
-git remote add origin https://github.com/votre-username/nom-du-depot.git
+# Link remote (replace URL)
+git remote add origin https://github.com/your-username/repo-name.git
 git branch -M main
 git push -u origin main
 ```

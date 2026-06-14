@@ -3,10 +3,14 @@ require_once __DIR__ . '/config.php';
 redirectIfNotAuthenticated();
 $pdo = getPDO();
 
-$alert = flashMessage();
-$studentId = isset($_GET['id']) ? (int)$_GET['id'] : null;
+$flash = flashMessage();
+$flashJson = $flash ? json_encode($flash) : 'null';
+
+$memberCategories = ['Adhérent', 'Étudiant', 'Senior', 'Enfant', 'Autre'];
+
+$memberId = isset($_GET['id']) ? (int)$_GET['id'] : null;
 $action = $_GET['action'] ?? '';
-$student = null;
+$member = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrfToken = $_POST['csrf_token'] ?? '';
@@ -24,9 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $stmt = $pdo->prepare('DELETE FROM students WHERE id = ?');
                 $stmt->execute([$deleteId]);
-                setFlash('Étudiant supprimé.', 'success');
+                setFlash('Membre supprimé.', 'success');
             } catch (PDOException $e) {
-                setFlash('Impossible de supprimer cet étudiant. Vérifiez les emprunts associés.', 'danger');
+                setFlash('Impossible de supprimer ce membre. Vérifiez les emprunts associés.', 'danger');
             }
         }
         header('Location: students.php');
@@ -34,43 +38,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $name = trim($_POST['name'] ?? '');
-    $studentNumber = trim($_POST['student_number'] ?? '');
+    $memberNumber = trim($_POST['student_number'] ?? '');
     $email = trim($_POST['email'] ?? '');
-    $program = trim($_POST['program'] ?? '');
-    $academicYear = trim($_POST['academic_year'] ?? '');
+    $category = trim($_POST['program'] ?? '');
+    $membershipType = trim($_POST['academic_year'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $address = trim($_POST['address'] ?? '');
     $editId = isset($_POST['student_id']) ? (int)$_POST['student_id'] : null;
 
-    if ($name === '' || $studentNumber === '' || $email === '' || $program === '' || $academicYear === '') {
-        setFlash('Tous les champs doivent être remplis.', 'warning');
+    if ($name === '' || $memberNumber === '' || $email === '' || $category === '' || $membershipType === '') {
+        setFlash('Tous les champs obligatoires doivent être remplis.', 'warning');
         header('Location: students.php' . ($editId ? '?action=edit&id=' . $editId : ''));
         exit;
     }
 
     $duplicateStmt = $pdo->prepare('SELECT id FROM students WHERE student_number = ? AND id != ?');
-    $duplicateStmt->execute([$studentNumber, $editId ?: 0]);
+    $duplicateStmt->execute([$memberNumber, $editId ?: 0]);
     if ($duplicateStmt->fetch()) {
-        setFlash('Ce numéro étudiant existe déjà.', 'danger');
+        setFlash('Ce numéro membre existe déjà.', 'danger');
         header('Location: students.php' . ($editId ? '?action=edit&id=' . $editId : ''));
         exit;
     }
 
     if ($editId) {
-        $stmt = $pdo->prepare('UPDATE students SET name = ?, student_number = ?, email = ?, program = ?, academic_year = ? WHERE id = ?');
-        $stmt->execute([$name, $studentNumber, $email, $program, $academicYear, $editId]);
-        setFlash('Étudiant mis à jour avec succès.', 'success');
+        $stmt = $pdo->prepare('UPDATE students SET name = ?, student_number = ?, email = ?, program = ?, academic_year = ?, phone = ?, address = ? WHERE id = ?');
+        $stmt->execute([$name, $memberNumber, $email, $category, $membershipType, $phone, $address, $editId]);
+        setFlash('Membre mis à jour avec succès.', 'success');
     } else {
-        $stmt = $pdo->prepare('INSERT INTO students (name, student_number, email, program, academic_year) VALUES (?, ?, ?, ?, ?)');
-        $stmt->execute([$name, $studentNumber, $email, $program, $academicYear]);
-        setFlash('Étudiant ajouté à la base.', 'success');
+        $stmt = $pdo->prepare('INSERT INTO students (name, student_number, email, program, academic_year, phone, address) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$name, $memberNumber, $email, $category, $membershipType, $phone, $address]);
+        setFlash('Membre ajouté.', 'success');
     }
     header('Location: students.php');
     exit;
 }
 
-if ($action === 'edit' && $studentId) {
+if ($action === 'edit' && $memberId) {
     $stmt = $pdo->prepare('SELECT * FROM students WHERE id = ?');
-    $stmt->execute([$studentId]);
-    $student = $stmt->fetch();
+    $stmt->execute([$memberId]);
+    $member = $stmt->fetch();
 }
 
 $search = trim($_GET['search'] ?? '');
@@ -84,67 +90,71 @@ if ($search !== '') {
 $query .= ' ORDER BY name ASC';
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
-$students = $stmt->fetchAll();
+$members = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Étudiants | <?= APP_NAME ?></title>
+    <title>Membres | <?= APP_NAME ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body class="dashboard-bg">
+<body class="dashboard-bg" data-flash="<?= htmlspecialchars($flashJson) ?>">
     <?php $active = 'students'; include __DIR__ . '/partials/nav.php'; ?>
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
     <main class="container py-5 mt-5">
         <div class="row g-4">
             <div class="col-xl-7">
                 <div class="dashboard-card p-4 rounded-4">
                     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between mb-4 gap-3">
                         <div>
-                            <h2 class="h4 text-white mb-1">Gestion des étudiants</h2>
-                            <p class="text-white-50 mb-0">Ajoutez des profils étudiants et retrouvez-les rapidement.</p>
+                            <h2 class="h4 text-white mb-1">Gestion des membres</h2>
+                            <p class="text-white-50 mb-0">Ajoutez des profils membres et retrouvez-les rapidement.</p>
                         </div>
                         <form class="w-100 w-md-auto" method="GET" action="students.php">
                             <div class="input-group input-group-lg shadow-sm rounded-pill overflow-hidden">
-                                <input type="text" name="search" class="form-control border-0" placeholder="Recherche étudiant" value="<?= htmlspecialchars($search) ?>">
+                                <input type="text" name="search" class="form-control border-0" placeholder="Recherche membre" value="<?= htmlspecialchars($search) ?>">
                                 <button class="btn btn-warning" type="submit">Rechercher</button>
                             </div>
                         </form>
                     </div>
 
-                    <?php if ($alert): ?>
-                        <div class="alert alert-<?= htmlspecialchars($alert['type']) ?> alert-dismissible fade show" role="alert">
-                            <?= htmlspecialchars($alert['text']) ?>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
-                        </div>
-                    <?php endif; ?>
-
                     <div class="table-responsive">
-                        <table class="table table-borderless align-middle text-white mb-0">
+                        <table class="table table-borderless table-striped table-hover align-middle text-white mb-0">
                             <thead>
                                 <tr class="text-white-50 small text-uppercase">
                                     <th>Nom</th>
-                                    <th>Numéro</th>
-                                    <th>Programme</th>
+                                    <th>N° Membre</th>
+                                    <th>Catégorie</th>
+                                    <th>Type abonnement</th>
                                     <th>Email</th>
                                     <th class="text-end">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if (empty($students)): ?>
-                                    <tr><td colspan="5" class="text-center text-white-50 py-4">Aucun étudiant enregistré.</td></tr>
+                                <?php if (empty($members)): ?>
+                                    <tr>
+                                        <td colspan="6" class="text-center py-5">
+                                            <div class="d-flex flex-column align-items-center gap-2">
+                                                <i class="fa-solid fa-user-group text-white-50" style="font-size: 3rem;"></i>
+                                                <span class="text-white-50">Aucun membre enregistré</span>
+                                                <small class="text-white-50">Cliquez sur "Ajouter" pour créer le premier membre</small>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 <?php else: ?>
-                                    <?php foreach ($students as $row): ?>
+                                    <?php foreach ($members as $row): ?>
                                         <tr class="border-top border-white border-opacity-10">
                                             <td><?= htmlspecialchars($row['name']) ?></td>
                                             <td><?= htmlspecialchars($row['student_number']) ?></td>
-                                            <td><?= htmlspecialchars($row['program']) ?></td>
+                                            <td><span class="badge bg-secondary"><?= htmlspecialchars($row['program']) ?></span></td>
+                                            <td><?= htmlspecialchars($row['academic_year']) ?></td>
                                             <td><?= htmlspecialchars($row['email']) ?></td>
                                             <td class="text-end">
                                                 <a href="students.php?action=edit&id=<?= $row['id'] ?>" class="btn btn-sm btn-outline-light me-2">Modifier</a>
-                                                <form method="POST" action="students.php" style="display: inline;" onsubmit="return confirm('Supprimer cet étudiant ?');">
+                                                <form method="POST" action="students.php" style="display: inline;" onsubmit="return confirm('Supprimer ce membre ?');">
                                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
                                                     <input type="hidden" name="action" value="delete">
                                                     <input type="hidden" name="student_id" value="<?= $row['id'] ?>">
@@ -162,31 +172,44 @@ $students = $stmt->fetchAll();
 
             <div class="col-xl-5">
                 <div class="dashboard-card p-4 rounded-4">
-                    <h3 class="h5 text-white mb-3"><?= $student ? 'Modifier l’étudiant' : 'Ajouter un étudiant' ?></h3>
+                    <h3 class="h5 text-white mb-3"><?= $member ? 'Modifier le membre' : 'Ajouter un membre' ?></h3>
                     <form method="POST" class="needs-validation" novalidate>
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
-                        <input type="hidden" name="student_id" value="<?= $student ? $student['id'] : '' ?>">
+                        <input type="hidden" name="student_id" value="<?= $member ? $member['id'] : '' ?>">
                         <div class="mb-3">
                             <label class="form-label text-white">Nom complet</label>
-                            <input type="text" name="name" class="form-control form-control-lg" value="<?= htmlspecialchars($student['name'] ?? '') ?>" required>
+                            <input type="text" name="name" class="form-control form-control-lg" value="<?= htmlspecialchars($member['name'] ?? '') ?>" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label text-white">Numéro étudiant</label>
-                            <input type="text" name="student_number" class="form-control form-control-lg" value="<?= htmlspecialchars($student['student_number'] ?? '') ?>" required>
+                            <label class="form-label text-white">N° Membre</label>
+                            <input type="text" name="student_number" class="form-control form-control-lg" value="<?= htmlspecialchars($member['student_number'] ?? '') ?>" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-white">Email</label>
-                            <input type="email" name="email" class="form-control form-control-lg" value="<?= htmlspecialchars($student['email'] ?? '') ?>" required>
+                            <input type="email" name="email" class="form-control form-control-lg" value="<?= htmlspecialchars($member['email'] ?? '') ?>" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label text-white">Programme</label>
-                            <input type="text" name="program" class="form-control form-control-lg" value="<?= htmlspecialchars($student['program'] ?? '') ?>" required>
+                            <label class="form-label text-white">Catégorie</label>
+                            <select name="program" class="form-select form-select-lg" required>
+                                <option value="">Sélectionner une catégorie</option>
+                                <?php foreach ($memberCategories as $cat): ?>
+                                    <option value="<?= $cat ?>" <?= isset($member['program']) && $member['program'] === $cat ? 'selected' : '' ?>><?= $cat ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label text-white">Année d’étude</label>
-                            <input type="text" name="academic_year" class="form-control form-control-lg" value="<?= htmlspecialchars($student['academic_year'] ?? '') ?>" required>
+                            <label class="form-label text-white">Type d'abonnement</label>
+                            <input type="text" name="academic_year" class="form-control form-control-lg" value="<?= htmlspecialchars($member['academic_year'] ?? '') ?>" required>
                         </div>
-                        <button class="btn btn-warning btn-lg w-100"><?= $student ? 'Enregistrer' : 'Ajouter' ?></button>
+                        <div class="mb-3">
+                            <label class="form-label text-white">Téléphone <span class="text-white-50 small">(optionnel)</span></label>
+                            <input type="tel" name="phone" class="form-control form-control-lg" value="<?= htmlspecialchars($member['phone'] ?? '') ?>" placeholder="+33 6 00 00 00 00">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-white">Adresse <span class="text-white-50 small">(optionnel)</span></label>
+                            <textarea name="address" rows="2" class="form-control form-control-lg" placeholder="Adresse complète"><?= htmlspecialchars($member['address'] ?? '') ?></textarea>
+                        </div>
+                        <button class="btn btn-warning btn-lg w-100"><?= $member ? 'Enregistrer' : 'Ajouter' ?></button>
                     </form>
                 </div>
             </div>
@@ -194,6 +217,7 @@ $students = $stmt->fetchAll();
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/toast.js"></script>
     <script>
         (() => {
             'use strict';

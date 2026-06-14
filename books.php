@@ -3,7 +3,8 @@ require_once __DIR__ . '/config.php';
 redirectIfNotAuthenticated();
 $pdo = getPDO();
 
-$alert = flashMessage();
+$flash = flashMessage();
+$flashJson = $flash ? json_encode($flash) : 'null';
 $bookId = isset($_GET['id']) ? (int)$_GET['id'] : null;
 $action = $_GET['action'] ?? '';
 
@@ -107,8 +108,9 @@ $books = $books->fetchAll();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body class="dashboard-bg">
+<body class="dashboard-bg" data-flash="<?= htmlspecialchars($flashJson) ?>">
     <?php $active = 'books'; include __DIR__ . '/partials/nav.php'; ?>
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
     <main class="container py-5 mt-5">
         <div class="row g-4">
             <div class="col-xl-7">
@@ -126,15 +128,8 @@ $books = $books->fetchAll();
                         </form>
                     </div>
 
-                    <?php if ($alert): ?>
-                        <div class="alert alert-<?= htmlspecialchars($alert['type']) ?> alert-dismissible fade show" role="alert">
-                            <?= htmlspecialchars($alert['text']) ?>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
-                        </div>
-                    <?php endif; ?>
-
                     <div class="table-responsive">
-                        <table class="table table-borderless align-middle text-white mb-0">
+                        <table class="table table-borderless table-striped table-hover align-middle text-white mb-0">
                             <thead>
                                 <tr class="text-white-50 small text-uppercase">
                                     <th>Titre</th>
@@ -153,7 +148,19 @@ $books = $books->fetchAll();
                                             <td><?= htmlspecialchars($row['title']) ?></td>
                                             <td><?= htmlspecialchars($row['author']) ?></td>
                                             <td><?= htmlspecialchars($row['category']) ?></td>
-                                            <td class="text-center text-warning fw-semibold"><?= htmlspecialchars($row['copies_available']) ?>/<?= htmlspecialchars($row['copies_total']) ?></td>
+                                            <td class="text-center">
+                                                <?php
+                                                $avail = (int)$row['copies_available'];
+                                                if ($avail > 1) {
+                                                    $badgeClass = 'badge bg-success';
+                                                } elseif ($avail === 1) {
+                                                    $badgeClass = 'badge bg-warning text-dark';
+                                                } else {
+                                                    $badgeClass = 'badge bg-danger';
+                                                }
+                                                ?>
+                                                <span class="<?= $badgeClass ?>"><?= $avail ?>/<?= htmlspecialchars($row['copies_total']) ?></span>
+                                            </td>
                                             <td class="text-end">
                                                 <a href="books.php?action=edit&id=<?= $row['id'] ?>" class="btn btn-sm btn-outline-light me-2">Modifier</a>
                                                 <form method="POST" action="books.php" style="display: inline;" onsubmit="return confirm('Supprimer ce livre ?');">
@@ -221,6 +228,7 @@ $books = $books->fetchAll();
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/toast.js"></script>
     <script>
         (() => {
             'use strict';

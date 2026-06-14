@@ -4,12 +4,13 @@ redirectIfNotAuthenticated();
 
 $pdo = getPDO();
 
-$totalBooks = $pdo->query('SELECT SUM(copies_total) AS total_books FROM books')->fetchColumn();
-$totalStudents = $pdo->query('SELECT COUNT(*) FROM students')->fetchColumn();
-$totalBorrowed = $pdo->query('SELECT COUNT(*) FROM borrowings WHERE returned = 0')->fetchColumn();
+$totalBooks = (int)$pdo->query('SELECT SUM(copies_total) AS total_books FROM books')->fetchColumn();
+$totalMembers = (int)$pdo->query('SELECT COUNT(*) FROM students')->fetchColumn();
+$totalBorrowed = (int)$pdo->query('SELECT COUNT(*) FROM borrowings WHERE returned = 0')->fetchColumn();
+$totalOverdue = (int)$pdo->query('SELECT COUNT(*) FROM borrowings WHERE returned = 0 AND due_date < CURDATE()')->fetchColumn();
 
 $recentActivityStmt = $pdo->prepare(
-    'SELECT s.name AS student_name, s.student_number, bk.title, b.borrow_date, b.due_date, b.returned
+    'SELECT s.name AS member_name, s.student_number, bk.title, b.borrow_date, b.due_date, b.returned
      FROM borrowings b
      JOIN books bk ON b.book_id = bk.id
      JOIN students s ON b.student_id = s.id
@@ -39,6 +40,7 @@ $booksStmt->execute($params);
 $books = $booksStmt->fetchAll();
 
 $flash = flashMessage();
+$flashJson = $flash ? json_encode($flash) : 'null';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -49,56 +51,60 @@ $flash = flashMessage();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body class="dashboard-bg">
+<body class="dashboard-bg" data-flash="<?= htmlspecialchars($flashJson) ?>">
     <?php $active = 'dashboard'; include __DIR__ . '/partials/nav.php'; ?>
     <div id="p5-dashboard-canvas"></div>
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
     <main class="container py-5 mt-5">
         <div class="row align-items-end mb-4">
             <div class="col-lg-8">
                 <h1 class="display-6 text-white fw-bold">Tableau de bord</h1>
-                <p class="text-white-50 mb-0">Bienvenue sur le centre de gestion de la bibliothèque inspirée du Sénégal.</p>
+                <p class="text-white-50 mb-0">Bienvenue sur le centre de gestion de la bibliothèque.</p>
             </div>
             <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
                 <a href="index.php" class="btn btn-warning shadow-sm">Retour à l&apos;accueil</a>
             </div>
         </div>
 
-        <?php if ($flash): ?>
-            <div class="alert alert-<?= htmlspecialchars($flash['type']) ?> alert-dismissible fade show" role="alert">
-                <?= htmlspecialchars($flash['text']) ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
-            </div>
-        <?php endif; ?>
-
         <div class="row g-4 mb-4">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="dashboard-card p-4 rounded-4">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <span class="badge bg-white text-dark">Livres</span>
                         <span class="text-primary fs-4">📚</span>
                     </div>
                     <h2 class="display-5 fw-bold"><?= number_format($totalBooks) ?></h2>
-                    <p class="text-white-50 mb-0">Total de livres disponibles dans la collection.</p>
+                    <p class="text-white-50 mb-0">Total de livres dans la collection.</p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="dashboard-card p-4 rounded-4">
                     <div class="d-flex align-items-center justify-content-between mb-3">
-                        <span class="badge bg-white text-dark">Étudiants</span>
-                        <span class="text-warning fs-4">🎓</span>
+                        <span class="badge bg-white text-dark">Membres</span>
+                        <span class="text-warning fs-4">👥</span>
                     </div>
-                    <h2 class="display-5 fw-bold"><?= number_format($totalStudents) ?></h2>
-                    <p class="text-white-50 mb-0">Étudiants enregistrés via le système de prêt.</p>
+                    <h2 class="display-5 fw-bold"><?= number_format($totalMembers) ?></h2>
+                    <p class="text-white-50 mb-0">Membres enregistrés.</p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="dashboard-card p-4 rounded-4">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <span class="badge bg-white text-dark">Emprunts</span>
                         <span class="text-success fs-4">📖</span>
                     </div>
                     <h2 class="display-5 fw-bold"><?= number_format($totalBorrowed) ?></h2>
-                    <p class="text-white-50 mb-0">Livres actuellement empruntés par les étudiants.</p>
+                    <p class="text-white-50 mb-0">Livres actuellement empruntés.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="dashboard-card p-4 rounded-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="badge bg-white text-dark">Retards</span>
+                        <span class="text-danger fs-4">⚠️</span>
+                    </div>
+                    <h2 class="display-5 fw-bold"><?= number_format($totalOverdue) ?></h2>
+                    <p class="text-white-50 mb-0">Emprunts en retard.</p>
                 </div>
             </div>
         </div>
@@ -155,7 +161,7 @@ $flash = flashMessage();
                         <?php foreach ($recentActivities as $activity): ?>
                             <div class="list-group-item bg-transparent border-top border-white border-opacity-10 text-white py-3">
                                 <div class="d-flex justify-content-between mb-2">
-                                    <strong><?= htmlspecialchars($activity['student_name']) ?></strong>
+                                    <strong><?= htmlspecialchars($activity['member_name']) ?></strong>
                                     <span class="badge bg-<?= $activity['returned'] ? 'success' : 'warning' ?> text-dark"><?= $activity['returned'] ? 'Retourné' : 'Actif' ?></span>
                                 </div>
                                 <p class="mb-1 text-white-50 small">"<?= htmlspecialchars($activity['title']) ?>" par <?= htmlspecialchars($activity['student_number']) ?></p>
@@ -171,5 +177,6 @@ $flash = flashMessage();
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="assets/js/dashboard.js"></script>
+    <script src="assets/js/toast.js"></script>
 </body>
 </html>

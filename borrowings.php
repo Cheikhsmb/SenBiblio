@@ -3,7 +3,9 @@ require_once __DIR__ . '/config.php';
 redirectIfNotAuthenticated();
 $pdo = getPDO();
 
-$alert = flashMessage();
+$flash = flashMessage();
+$flashJson = $flash ? json_encode($flash) : 'null';
+
 $action = $_GET['action'] ?? '';
 $borrowingId = isset($_GET['id']) ? (int)$_GET['id'] : null;
 
@@ -99,8 +101,9 @@ $books = $pdo->query('SELECT id, title, copies_available FROM books ORDER BY tit
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body class="dashboard-bg">
+<body class="dashboard-bg" data-flash="<?= htmlspecialchars($flashJson) ?>">
     <?php $active = 'borrowings'; include __DIR__ . '/partials/nav.php'; ?>
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
     <main class="container py-5 mt-5">
         <div class="row g-4">
             <div class="col-xl-7">
@@ -118,18 +121,11 @@ $books = $pdo->query('SELECT id, title, copies_available FROM books ORDER BY tit
                         </form>
                     </div>
 
-                    <?php if ($alert): ?>
-                        <div class="alert alert-<?= htmlspecialchars($alert['type']) ?> alert-dismissible fade show" role="alert">
-                            <?= htmlspecialchars($alert['text']) ?>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
-                        </div>
-                    <?php endif; ?>
-
                     <div class="table-responsive">
-                        <table class="table table-borderless align-middle text-white mb-0">
+                        <table class="table table-borderless table-striped table-hover align-middle text-white mb-0">
                             <thead>
                                 <tr class="text-white-50 small text-uppercase">
-                                    <th>Étudiant</th>
+                                    <th>Membre</th>
                                     <th>Livre</th>
                                     <th>Emprunt</th>
                                     <th>Échéance</th>
@@ -142,15 +138,19 @@ $books = $pdo->query('SELECT id, title, copies_available FROM books ORDER BY tit
                                     <tr><td colspan="6" class="text-center text-white-50 py-4">Aucun emprunt trouvé.</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($borrowings as $row): ?>
-                                        <tr class="border-top border-white border-opacity-10">
-                                            <td><?= htmlspecialchars($row['student_name']) ?> <span class="text-white-50 d-block small"><?= htmlspecialchars($row['student_number']) ?></span></td>
+                                        <?php
+                                        $isOverdue = !$row['returned'] && strtotime($row['due_date']) < time();
+                                        $rowClass = $isOverdue ? 'border-top border-white border-opacity-10 bg-danger-subtle' : 'border-top border-white border-opacity-10';
+                                        ?>
+                                        <tr class="<?= $rowClass ?>">
+                                            <td><?= htmlspecialchars($row['student_name']) ?> <span class="text-white-50 d-block small">N° <?= htmlspecialchars($row['student_number']) ?></span></td>
                                             <td><?= htmlspecialchars($row['book_title']) ?></td>
                                             <td><?= htmlspecialchars($row['borrow_date']) ?></td>
                                             <td><?= htmlspecialchars($row['due_date']) ?></td>
                                             <td>
                                                 <?php if ($row['returned']): ?>
                                                     <span class="badge bg-success text-dark">Retourné</span>
-                                                <?php elseif (strtotime($row['due_date']) < time()): ?>
+                                                <?php elseif ($isOverdue): ?>
                                                     <span class="badge bg-danger text-dark">En retard</span>
                                                 <?php else: ?>
                                                     <span class="badge bg-warning text-dark">Actif</span>
@@ -183,11 +183,11 @@ $books = $pdo->query('SELECT id, title, copies_available FROM books ORDER BY tit
                     <form method="POST" class="needs-validation" novalidate>
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
                         <div class="mb-3">
-                            <label class="form-label text-white">Étudiant</label>
+                            <label class="form-label text-white">Membre</label>
                             <select name="student_id" class="form-select form-select-lg" required>
-                                <option value="">Sélectionner un étudiant</option>
+                                <option value="">Sélectionner un membre</option>
                                 <?php foreach ($students as $student): ?>
-                                    <option value="<?= $student['id'] ?>"><?= htmlspecialchars($student['name'] . ' (' . $student['student_number'] . ')') ?></option>
+                                    <option value="<?= $student['id'] ?>"><?= htmlspecialchars($student['name'] . ' (N° ' . $student['student_number'] . ')') ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -218,6 +218,7 @@ $books = $pdo->query('SELECT id, title, copies_available FROM books ORDER BY tit
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/toast.js"></script>
     <script>
         (() => {
             'use strict';

@@ -54,15 +54,20 @@ $csrfToken = generateCsrfToken();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body class="login-bg">
+<?php
+$flash = flashMessage();
+$flashJson = $flash ? json_encode($flash) : 'null';
+?>
+<body class="login-bg" data-flash="<?= htmlspecialchars($flashJson) ?>">
     <div id="p5-login-canvas"></div>
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
     
     <div class="d-flex align-items-center justify-content-center min-vh-100 login-page">
         <div class="login-card glass-card p-5 w-100 shadow-lg">
             <div class="text-center mb-4">
                 <span class="fs-1">📚</span>
                 <h1 class="h3 text-white fw-bold mt-2"><?= APP_NAME ?></h1>
-                <p class="text-white-50">Gestion de bibliothèque universitaire</p>
+                <p class="text-white-50">Système de gestion de bibliothèque</p>
             </div>
             
             <?php if ($error): ?>
@@ -72,23 +77,12 @@ $csrfToken = generateCsrfToken();
                 </div>
             <?php endif; ?>
 
-            <?php 
-            // Affichage de message flash si présent
-            $alert = flashMessage();
-            if ($alert): 
-            ?>
-                <div class="alert alert-<?= htmlspecialchars($alert['type']) ?> alert-dismissible fade show" role="alert">
-                    <?= htmlspecialchars($alert['text']) ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
-                </div>
-            <?php endif; ?>
-            
             <form method="POST" class="needs-validation" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                 
                 <div class="mb-3">
                     <label class="form-label text-white">Adresse Email</label>
-                    <input type="email" name="email" class="form-control form-control-lg" placeholder="admin@senlibrary.edu" required>
+                    <input type="email" name="email" class="form-control form-control-lg" placeholder="admin@library.local" required>
                     <div class="invalid-feedback">Veuillez entrer une adresse email valide.</div>
                 </div>
                 
@@ -106,6 +100,7 @@ $csrfToken = generateCsrfToken();
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="assets/js/p5-login.js"></script>
+    <script src="assets/js/toast.js"></script>
     <script>
         (() => {
             'use strict';
